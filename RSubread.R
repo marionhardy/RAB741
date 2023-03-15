@@ -8,11 +8,9 @@ library("tidyverse")
 
 # RsubreadUsersGuide() # For the complete user guide
 
-getwd()
-setwd("/Users/hardy/Documents/R_2022/Raphaele/RAB741")
 dir <- getwd()                    
 
-# Build indexes for mouse and homo sapiens genome (only once)
+# Build indexes for mouse and homo sapiens genomes (only once)
 
 # buildindex(basename="mouse_index",
 #            reference="/Users/hardy/Documents/R_2022/Genome_ref/GRCh38_mus_musculus/GRCm38.primary_assembly.genome.fa",
@@ -85,14 +83,12 @@ for (i in 1:length(x)){
                        isGTFAnnotationFile = TRUE,
                        useMetaFeatures = TRUE,
                        nthreads = 6,
-                       countMultiMappingReads = TRUE,
                        fraction = TRUE)
    write.table(x=data.frame(fc$annotation[,c("GeneID","Length")],
                             fc$counts,stringsAsFactors=FALSE),file="counts.txt",
                quote=FALSE,sep="\t",row.names=FALSE)
 
-
-    # create tibble with per-gene raw counts and normalized RPKM and TPM values
+    # create tibble with per-gene raw counts and normalized RPKM and TPM values (not here though)
    
    df <- tibble(fc$annotation[, c("GeneID", "Length")]) %>%
       add_column(RawCounts = fc$count[,1]) %>%
@@ -102,7 +98,7 @@ for (i in 1:length(x)){
    
    df$ensembl_gene_id <- as.character(df$ensembl_gene_id)
    
-   # No normalization needed if using DESeq2 subsequently
+   # No normalization needed if subsequently using DESeq2 
    
    # scale_rpkm <- sum(df$RawCounts) / 1000000
    # 

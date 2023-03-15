@@ -1,3 +1,4 @@
+# Merge .csv count files
 
 ## Assumes you have run the RSubread script or
 # you have a feature count file made from a .bam file
@@ -5,13 +6,11 @@
 
 library(DESeq2)
 library(purrr)
-library("tidyverse")
+library(tidyverse)
 library(stringr)
 library(dplyr)
-library("biomaRt")
+library(biomaRt)
 library(Hmisc)
-
-data()
 
 dir <- getwd()
 

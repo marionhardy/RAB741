@@ -14,6 +14,7 @@ ensembl_to_geneName <- getBM(attributes = c("ensembl_gene_id", "external_gene_na
 names(ensembl_to_geneName) <- c("ENSMUG", "gene", "ENTREZID", "description")
 head(ensembl_to_geneName)
 
+## Run this script every six months to get updated gene annotations
 
 
 
