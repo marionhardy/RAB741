@@ -1,3 +1,4 @@
+# Merge .csv count files
 
 ## Assumes you have run the RSubread script or
 # you have a feature count file made from a .bam file
