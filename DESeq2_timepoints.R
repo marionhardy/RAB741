@@ -267,7 +267,6 @@ saveRDS(res_tbl, file = "./data_output/sel_vs_ctrl_T96/RAB741_res_tbl_ctrl_sel_T
 write_csv(res_tbl, file = "./data_output/sel_vs_ctrl_T96/res_tbl.csv")
 
 
-
 ## Targeted search based on gene list from Raphaele-----------------------------
 
 library(readxl)

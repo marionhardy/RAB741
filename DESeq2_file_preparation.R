@@ -5,13 +5,11 @@
 
 library(DESeq2)
 library(purrr)
-library("tidyverse")
+library(tidyverse)
 library(stringr)
 library(dplyr)
-library("biomaRt")
+library(biomaRt)
 library(Hmisc)
-
-data()
 
 dir <- getwd()
 
