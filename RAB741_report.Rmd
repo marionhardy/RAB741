@@ -1,0 +1,594 @@
+---
+title: "RAB741_report"
+author: "Marion Hardy"
+date: "2023-02-02"
+output: 
+  html_document:
+    toc: true 
+    theme: spacelab 
+    highlight: monochrome
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, cache = TRUE, echo = FALSE, warning = F, cache.lazy = F)
+knitr::opts_chunk$set(fig.width=10, fig.height=15) 
+
+library(tidyverse)
+library(ggrepel)
+library(clusterProfiler)
+library(msigdbr)
+
+```
+
+```{r Data loading, include=FALSE}
+
+res_tbl <- read_csv("./data_output/sel_vs_ctrl_T96/res_tbl.csv")
+diff <- read_csv("./data_output/sel_vs_ctrl_T96/sign_different.csv")
+res_tbl1 <-  res_tbl %>% filter(!is.na(ENTREZID), padj<0.05)
+
+```
+
+# Introduction
+
+Data from Raphaële's samples
+
+-   Timepoints: 0, 48 and 96 hours
+
+-   Conditions: w/ or w/o tryptophan (Trp or selected)
+
+-   Technical duplicates
+
+For this report, we are only comparing gene expression between Trp negative and control at timepoint 96h.
+
+When something appears as "enriched", it can be interpreted as enriched in cells deprived of tryptophan.
+
+# Volcano plot for T96
+
+```{r, fig.height = 12, fig.width = 15}
+
+res_tbl %>%
+  filter(!is.na(padj)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.05 & abs(log2FoldChange) > 1, 
+             label = ifelse(padj<0.05&log2FoldChange>=1|padj<0.05&log2FoldChange<=-1,as.character(gene),''))) +
+  scale_colour_manual(values = c("gray", "firebrick3")) +
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  geom_text_repel(max.overlaps = 15)+
+  labs(title = "Selected vs control at T96")+
+  theme_bw()
+
+```
+
+# GSEA analysis
+
+I tested the Gene Set Enrichment Analysis on three differently ranked list of our significantly differently expressed genes. Ranking based on:
+
+-   Log fold change (normalized enrichment score can be negative)
+
+-   Adjusted pval (normalized enrichment score can not be negative)
+
+-   Test statistic (normalized enrichment score can not be negative)
+
+## LogFC ranking
+
+```{r}
+ordered_genes_fc <- res_tbl1$log2FoldChange
+names(ordered_genes_fc) <- res_tbl1$gene
+ordered_genes_fc <- sort(ordered_genes_fc, decreasing = T)
+
+set.seed(054057)
+
+```
+
+### Gene ontology
+
+```{r}
+
+mm_GO_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C5") # for gene ontology collection
+
+gsea_results_go <- GSEA(
+  geneList = ordered_genes_fc, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_GO_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_go, x = "NES", showCategory = 30)+ ggtitle("GSEA LFC Gene ontology")
+
+gsea_results_go %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_GO_sets")
+
+```
+
+### Hallmark
+
+```{r, fig.height = 10, fig.width = 8}
+
+mm_hallmark_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "H") # for hallmark collection
+
+gsea_results_hall <- GSEA(
+  geneList = ordered_genes_fc, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_hall, x = "NES", showCategory = 30)+ ggtitle("GSEA LFC Hallmarks")
+
+gsea_results_hall %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_hallmark_sets")
+```
+
+### Reactome
+
+```{r}
+
+mm_reactome_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:REACTOME") # for reactome collection
+
+gsea_results_reac <- GSEA(
+  geneList = ordered_genes_fc, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_reactome_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_reac, x = "NES", showCategory = 30)+ ggtitle("GSEA LFC Reactome")
+
+gsea_results_reac %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_reactome_sets")
+
+```
+
+### Biocarta
+
+No terms enriched
+
+### Wikipathways
+
+```{r, fig.height = 5, fig.width = 8}
+
+mm_wiki_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:WIKIPATHWAYS") # for Wikipathways collection
+
+gsea_results_wiki <- GSEA(
+  geneList = ordered_genes_fc, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_wiki_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_wiki, x = "NES", showCategory = 30)+ ggtitle("GSEA LFC Wikipathways")
+
+gsea_results_wiki %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_wiki_sets")
+
+```
+
+### KEGG
+
+```{r, fig.height = 5, fig.width = 8}
+
+mm_kegg_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:KEGG") # for KEGG collection
+
+gsea_results_kegg <- GSEA(
+  geneList = ordered_genes_fc, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_kegg_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_kegg, x = "NES", showCategory = 30)+ ggtitle("GSEA LFC KEGG")
+
+gsea_results_kegg %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_kegg_sets")
+
+```
+
+### TFT (regulatory genes)
+
+No terms enriched
+
+## Pval ranking
+
+!! I mostly did not find enriched terms so I put the acceptance threshold of the enrichment analysis at a pval of 0.05. Meaning this is only for info, not exploitable!
+
+```{r}
+
+ordered_genes_pval <- res_tbl1$padj
+names(ordered_genes_pval) <- res_tbl1$gene
+ordered_genes_pval <- sort(ordered_genes_pval, decreasing = T)
+
+set.seed(054057)
+```
+
+### Gene ontology
+
+```{r}
+
+mm_GO_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C5") # for gene ontology collection
+
+gsea_results_go <- GSEA(
+  geneList = ordered_genes_pval, 
+  pvalueCutoff = 0.5, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH",
+  scoreType = "pos",
+  TERM2GENE = dplyr::select(
+    mm_GO_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_go, x = "NES", showCategory = 30)+ ggtitle("GSEA pval Gene ontology")
+
+gsea_results_go %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_GO_sets")
+
+```
+
+### Hallmark
+
+No enriched terms under pval of 0.8!
+
+### Reactome
+
+```{r, fig.height = 8, fig.width = 8}
+
+mm_reactome_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:REACTOME") # for reactome collection
+
+gsea_results_reac <- GSEA(
+  geneList = ordered_genes_pval, 
+  pvalueCutoff = 0.5, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_reactome_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_reac, x = "NES", showCategory = 30)+ ggtitle("GSEA pval Reactome")
+
+gsea_results_reac %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_reactome_sets")
+
+```
+
+### Biocarta
+
+No term enriched
+
+### Wikipathways
+
+```{r}
+
+mm_wiki_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:WIKIPATHWAYS") # for Wikipathways collection
+
+gsea_results_wiki <- GSEA(
+  geneList = ordered_genes_pval, 
+  pvalueCutoff = 0.5, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_wiki_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_wiki, x = "NES", showCategory = 30)+ ggtitle("GSEA pval Wikipathways")
+
+gsea_results_wiki %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_wiki_sets")
+
+```
+
+### KEGG
+
+No terms enriched
+
+### TFT (regulatory genes)
+
+```{r, fig.height = 5, fig.width = 8}
+
+mm_regulatory_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C3",
+  subcategory = "TFT:TFT_Legacy") # for regulatory genes collection
+
+gsea_results_tft <- GSEA(
+  geneList = ordered_genes_pval, 
+  pvalueCutoff = 0.5, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_regulatory_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_tft, x = "NES", showCategory = 30)+ ggtitle("GSEA pval Regulatory genes")
+
+gsea_results_tft %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_regulatory_sets")
+
+```
+
+## Stat ranking
+
+```{r}
+ordered_genes_stat <- res_tbl1$stat
+names(ordered_genes_stat) <- res_tbl1$gene
+ordered_genes_stat <- sort(ordered_genes_stat, decreasing = T)
+
+set.seed(054057)
+
+```
+
+### Gene ontology
+
+```{r}
+
+mm_GO_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C5") # for gene ontology collection
+
+gsea_results_go <- GSEA(
+  geneList = ordered_genes_stat, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_GO_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_go, x = "NES", showCategory = 30)+ ggtitle("GSEA Stat Gene ontology")
+
+gsea_results_go %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_GO_sets")
+
+```
+
+### Hallmark
+
+```{r}
+
+mm_hallmark_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "H") # for hallmark collection
+
+gsea_results_hall <- GSEA(
+  geneList = ordered_genes_stat, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_hall, x = "NES", showCategory = 30)+ ggtitle("GSEA Stat Hallmarks")
+
+gsea_results_hall %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_hallmark_sets")
+```
+
+### Reactome
+
+```{r}
+
+mm_reactome_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:REACTOME") # for reactome collection
+
+gsea_results_reac <- GSEA(
+  geneList = ordered_genes_stat, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_reactome_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_reac, x = "NES", showCategory = 30)+ ggtitle("GSEA Stat Reactome")
+
+gsea_results_reac %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_reactome_sets")
+
+```
+
+### Biocarta
+
+No terms enriched
+
+### Wikipathways
+
+```{r}
+
+mm_wiki_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:WIKIPATHWAYS") # for Wikipathways collection
+
+gsea_results_wiki <- GSEA(
+  geneList = ordered_genes_stat, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_wiki_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_wiki, x = "NES", showCategory = 30)+ ggtitle("GSEA Stat Wikipathways")
+
+gsea_results_wiki %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_wiki_sets")
+
+```
+
+### KEGG
+
+```{r, fig.height = 5, fig.width = 8}
+
+mm_kegg_sets <- msigdbr(
+  species = "Mus musculus", 
+  category = "C2",
+  subcategory = "CP:KEGG") # for KEGG collection
+
+gsea_results_kegg <- GSEA(
+  geneList = ordered_genes_stat, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    mm_kegg_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+dotplot(gsea_results_kegg, x = "NES", showCategory = 30)+ ggtitle("GSEA Stat KEGG")
+
+gsea_results_kegg %>% 
+  as_tibble() %>% 
+  select(1:9) %>%
+  knitr::kable()
+
+rm(list = "mm_kegg_sets")
+
+```
+
+### TFT (regulatory genes)
+
+No terms enriched
