@@ -5,7 +5,7 @@ Repository for RAB in BVDE lab (RNAseq analyses)
 ## Experimental design
 
 Mice T cells at T0h, in presence or absence of tryptophan in the medium.
-Total RNA was extracted using Trizol at T0h, 48h and 96h.
+Total RNA was extracted using Trizol at T0h, 48h and 96h after treatment.
 Sequencing was done by Illumina Seq, 10^6 depth of sequencing? (need to ask for more info)
 
 ## Scripts used:
@@ -53,29 +53,26 @@ dds <- DESeqDataSetFromMatrix(countData = counts, colData = coldata,
 dds <- DESeq(dds, test="LRT", reduced=~celltype+timepoint)
 
 Which allows to have information on how timepoints and cell types and treatment impact affect the T cell transcription.
-
+4. Quality control check using size factors, dispersion and PCA.
+5. Extracting results for different sample comparisons
+6. Volcano plots
+7. Annotating genes using biomart
 
 ### 04_RAB741_report
 
+GSEA analysis using gene lists ranked on logFC, test statistic or pvalue and querying:
+- Gene Onology (MF,CC,BP)
+- Biocarta
+- Hallmark
+- Reactome
+- KEGG
+- Wikipathways
+- TFT (regulatory genes)
 
+## Supplementary scripts
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- 05_1_Biomart_annotations: Script to fetch annotations from biomart
+- 05_2_Improvements: Script listing some improvements that were implemented or not following a discussion on the RAB741 report
+- 05_3_Transform_tsv_col: Script to fetch the genes implicated in a pathway (from GSEA object) and output a list with a gene per row in a txt file
+- 05_4_Venn: Script to make a venn diagram with more than three intersecting conditions
 
