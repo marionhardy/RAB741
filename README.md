@@ -69,7 +69,7 @@ GSEA analysis using gene lists ranked on logFC, test statistic or pvalue and que
 - Wikipathways
 - TFT (regulatory genes)
 
-## Supplementary scripts
+### 05 Supplementary scripts
 
 - 05_1_Biomart_annotations: Script to fetch annotations from biomart
 - 05_2_Improvements: Script listing some improvements that were implemented or not following a discussion on the RAB741 report
